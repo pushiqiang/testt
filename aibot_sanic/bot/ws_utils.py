@@ -33,20 +33,30 @@ class WebSocketClient(object):
 
     def __init__(self, io_loop=None):
         self._io_loop = io_loop
-        self._session = aiohttp.ClientSession(loop=self._io_loop)
+        self._session = None
         self._ws_connection = None
         self._connect_status = self.DISCONNECTED
 
-    def connect(self, url, auto_reconnet=True, reconnet_interval=10):
+    async def connect(self, url, auto_reconnet=True, reconnet_interval=10):
         self.ws_url = url
         self.auto_reconnet = auto_reconnet
         self.reconnect_interval = reconnet_interval
         self._connect_status = self.CONNECTING
+        self._session = await aiohttp.ClientSession(loop=self.io_loop)
 
         headers = {'Content-Type': APPLICATION_JSON}
 
-        ws_conn = self._session.ws_connect(url, headers=headers)
-        ws_conn.add_done_callback(self._connect_callback)
+        ws_conn_future = asyncio.ensure_future(self._session.ws_connect(url, headers=headers))
+        ws_conn_future.add_done_callback(self._connect_callback)
+
+    def _connect_callback(self, future):
+        if future.done():
+            self._connect_status = self.CONNECTED
+            self._ws_connection = future.result()
+            self.on_connection_success()
+            asyncio.ensure_future(self._read_messages())
+        else:
+            self.close()
 
     async def send(self, data):
         """Send message to the server
@@ -57,26 +67,14 @@ class WebSocketClient(object):
             print('Send message=%s' % data)
             await self._ws_connection.send_json(data)
 
-    def close(self, reason=''):
+    async def close(self, reason=''):
         """Close connection.
         """
-
         if self._connect_status != self.DISCONNECTED:
             self._connect_status = self.DISCONNECTED
-            self._session and self._session.close()
-            self._session = None
-            self._ws_connection and self._ws_connection.close()
+            self._ws_connection and await self._ws_connection.close()
             self._ws_connection = None
-            self.on_connection_close(reason)
-
-    def _connect_callback(self, future):
-        if future.exception() is None:
-            self._connect_status = self.CONNECTED
-            self._ws_connection = future.result()
-            self.on_connection_success()
-            await self._read_messages()
-        else:
-            self.close(future.exception())
+            # self.on_connection_close(reason)
 
     @property
     def is_connected(self):
@@ -86,26 +84,24 @@ class WebSocketClient(object):
         while True:
             msg = await self._ws_connection.receive()
             if msg is None:
-                self.close()
+                await self.close()
                 break
 
-            self.on_message(msg)
+            await self.on_message(msg)
 
-    def on_message(self, msg):
+    async def on_message(self, msg):
         print '[%s]on_message msg=%s' % (id(self), msg)
-        self._io_loop.call_later(self.heartbeat_interval_in_secs,
-                                 functools.partial(self.send, self.hb_msg))
+        await self.send(self.hb_msg)
 
-    def on_connection_success(self):
+    async def on_connection_success(self):
         print('Connected!')
-        self.send(self.msg)
+        await self.send(self.msg)
 
     def on_connection_close(self, reason):
         print('Connection closed reason=%s' % (reason,))
-        self.reconnect()
+        await self.reconnect()
 
-    def reconnect(self):
+    async def reconnect(self):
         print 'reconnect'
         if not self.is_connected() and self.auto_reconnet:
-            self._io_loop.call_later(self.reconnect_interval, .connect, self.ws_url)
-
+            await self.connect(self.ws_url)
