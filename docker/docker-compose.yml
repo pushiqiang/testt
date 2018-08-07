@@ -1,0 +1,12 @@
+version: '2'
+
+services:
+
+  backend:
+    restart: always
+    build: ../
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../aibot_sanic:/opt/app
+    command: sleep 999999999
