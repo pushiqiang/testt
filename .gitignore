@@ -1,0 +1,52 @@
+# .gitignore
+
+# self defined -- Django
+db.sqlite3
+media
+local_settings.py
+
+*.log
+
+# Redis
+dump.rdb
+
+
+### python ###
+*.py[cod]
+__pycache__/
+*.so
+pip-log.txt
+
+
+### Vim ###
+.ropeproject
+[._]*.s[a-w][a-z]
+[._]s[a-w][a-z]
+*~
+
+### Pycharm ###
+.idea/*
+.idea/
+.vscode/
+
+### Mac ###
+.DS_Store
+
+
+# SVN
+.svn
+
+# added by Jing Yang <tom@kliyes.com>
+.project
+.pydevproject
+.settings/
+venv/
+
+!PLACEHOLDER
+
+# Deploy
+staging.retry
+production.retry
+deploy/backend/files/deploy.json
+canting/canting/api_build.py
+.coverage
