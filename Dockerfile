@@ -8,7 +8,7 @@ RUN apt-get update;\
     apt-get install -y vim;\
     true
 
-COPY aibot_sanic/ /opt/app
+COPY aibot_sanic/requirements.txt /opt/app/
 WORKDIR /opt/app
 
 # 使用镜像下载

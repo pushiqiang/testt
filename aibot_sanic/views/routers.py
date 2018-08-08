@@ -5,6 +5,15 @@ from sanic.blueprints import Blueprint
 
 from views import views
 
-blueprint = Blueprint('example', version='1')
+blueprint = Blueprint('bot', version='1')
 
-blueprint.add_route(views.ExampleView.as_view(), '/example', methods=['POST'])
+# create, list bot
+blueprint.add_route(
+    views.AIBotListView.as_view(),
+    '/bots', methods=['GET', 'POST'])
+
+# get，delete bot
+blueprint.add_route(
+    views.AIBotDetailView.as_view(),
+    '/bots/<key:[-a-f0-9]+>/',
+    methods=['GET', 'DELETE'])
