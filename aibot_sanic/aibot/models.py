@@ -1,6 +1,7 @@
 
 
 class AIBotRecord:
+    """在线机器人记录"""
     _bots = {}
 
     @classmethod

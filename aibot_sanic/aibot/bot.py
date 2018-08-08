@@ -17,7 +17,7 @@ DEFAULT_REQUEST_TIMEOUT = 30
 
 
 class AIBot(object):
-    """Base for web socket clients.
+    """斗地主AI机器人
     """
 
     # ws status
@@ -59,9 +59,13 @@ class AIBot(object):
         """Send message to the server
         :param str data: message.
         """
-
         if self._ws_connection:
             await self._ws_connection.send_json(data)
+
+    async def http_send(self, url, **kwargs):
+        if self._session:
+            response = await self._session.post(url, **kwargs)
+            return await response.json()
 
     async def ws_close(self, reason=''):
         """Close connection.
@@ -83,7 +87,8 @@ class AIBot(object):
         if not self.is_ws_connected and self.auto_reconnet:
             self._io_loop.call_later(self.reconnect_interval, partial(self.ws_connect, self.ws_url))
 
-    async def receive(self):
+    async def ws_receive(self):
+        """接收ws消息"""
         return await self._ws_connection.receive()
 
     async def start(self):
@@ -107,11 +112,11 @@ class AIBot(object):
         self.status = self.PLAYING
 
         print('Started game...')
-        hb_msg = {'type': 'hb'}  # hearbeat
+        hb_msg = {'type': 'hb'}
         await self.ws_send(hb_msg)
 
         while(True):
-            msg = await self.receive()
+            msg = await self.ws_receive()
             if msg.type == aiohttp.WSMsgType.CLOSED:
                 print('Bot [{}] closed'.format(self.key))
                 return
